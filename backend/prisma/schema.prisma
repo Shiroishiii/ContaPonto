@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS
+
+enum UserRole {
+  ADMIN
+  EMPLOYEE
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+}
+
+enum PunchType {
+  ENTRY
+  BREAK_START
+  BREAK_END
+  EXIT
+}
+
+enum RecordSource {
+  WEB
+}
+
+enum CorrectionAction {
+  ADJUST_TIME
+  ADD_RECORD
+  REMOVE_RECORD
+}
+
+enum CorrectionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// EMPRESA
+
+model Company {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(150)
+  cnpj      String?  @unique @db.VarChar(18)
+  timezone  String   @default("America/Sao_Paulo") @db.VarChar(60)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users              User[]
+  employees          Employee[]
+  workSchedules      WorkSchedule[]
+  timeRecords        TimeRecord[]
+  correctionRequests CorrectionRequest[]
+  auditLogs          AuditLog[]
+}
+
+// USUÁRIOS E AUTENTICAÇÃO
+
+model User {
+  id           Int       @id @default(autoincrement())
+  companyId    Int
+  name         String    @db.VarChar(150)
+  email        String    @unique @db.VarChar(180)
+  passwordHash String    @db.VarChar(255)
+  role         UserRole  @default(EMPLOYEE)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  company             Company              @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  employee            Employee?
+  passwordResetTokens PasswordResetToken[]
+  reviewedCorrections CorrectionRequest[]  @relation("CorrectionReviewer")
+  auditLogs           AuditLog[]
+
+  @@index([companyId])
+  @@index([companyId, role])
+}
+
+// FUNCIONÁRIOS
+
+model Employee {
+  id            Int            @id @default(autoincrement())
+  companyId     Int
+  userId        Int?           @unique
+  employeeCode  String         @db.VarChar(30)
+  fullName      String         @db.VarChar(150)
+  cpf           String?        @db.VarChar(14)
+  phone         String?        @db.VarChar(20)
+  position      String?        @db.VarChar(100)
+  admissionDate DateTime?      @db.Date
+  status        EmployeeStatus @default(ACTIVE)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  company             Company             @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  user                User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  scheduleAssignments EmployeeSchedule[]
+  timeRecords         TimeRecord[]
+  correctionRequests  CorrectionRequest[]
+
+  @@unique([companyId, employeeCode])
+  @@unique([companyId, cpf])
+  @@index([companyId, status])
+  @@index([companyId, fullName])
+}
+
+// JORNADAS
+
+model WorkSchedule {
+  id          Int      @id @default(autoincrement())
+  companyId   Int
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company     Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  days        WorkScheduleDay[]
+  assignments EmployeeSchedule[]
+
+  @@index([companyId, isActive])
+}
+
+model WorkScheduleDay {
+  id              Int      @id @default(autoincrement())
+  scheduleId      Int
+  weekday         Int
+  startTime       String   @db.VarChar(5)
+  breakStartTime  String?  @db.VarChar(5)
+  breakEndTime    String?  @db.VarChar(5)
+  endTime         String   @db.VarChar(5)
+  expectedMinutes Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  schedule WorkSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, weekday])
+}
+
+// VÍNCULO ENTRE FUNCIONÁRIO E JORNADA
+
+model EmployeeSchedule {
+  id         Int       @id @default(autoincrement())
+  employeeId Int
+  scheduleId Int
+  startDate  DateTime  @db.Date
+  endDate    DateTime? @db.Date
+  createdAt  DateTime  @default(now())
+
+  employee Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  schedule WorkSchedule @relation(fields: [scheduleId], references: [id], onDelete: Restrict)
+
+  @@index([employeeId, startDate])
+  @@index([scheduleId])
+}
+
+// REGISTROS DE PONTO
+
+model TimeRecord {
+  id         Int          @id @default(autoincrement())
+  companyId  Int
+  employeeId Int
+  type       PunchType
+  recordedAt DateTime     @db.DateTime(3)
+  source     RecordSource @default(WEB)
+  createdAt  DateTime     @default(now())
+
+  company            Company             @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  employee           Employee            @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  correctionRequests CorrectionRequest[]
+
+  @@index([companyId, recordedAt])
+  @@index([employeeId, recordedAt])
+  @@index([employeeId, type, recordedAt])
+}
+
+// SOLICITAÇÕES DE CORREÇÃO
+
+model CorrectionRequest {
+  id            Int              @id @default(autoincrement())
+  companyId     Int
+  employeeId    Int
+  recordId      Int?
+  action        CorrectionAction
+  requestedType PunchType?
+  requestedAt   DateTime?        @db.DateTime(3)
+  reason        String           @db.Text
+  status        CorrectionStatus @default(PENDING)
+  reviewedById  Int?
+  reviewedAt    DateTime?
+  reviewerNote  String?          @db.Text
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  employee   Employee    @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  record     TimeRecord? @relation(fields: [recordId], references: [id], onDelete: SetNull)
+  reviewedBy User?       @relation("CorrectionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status])
+  @@index([employeeId, createdAt])
+}
+
+// RECUPERAÇÃO DE SENHA
+
+model PasswordResetToken {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  tokenHash String    @unique @db.VarChar(255)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+// AUDITORIA
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  userId    Int?
+  action    String   @db.VarChar(100)
+  entity    String   @db.VarChar(100)
+  entityId  String?  @db.VarChar(50)
+  details   Json?
+  ipAddress String?  @db.VarChar(45)
+  userAgent String?  @db.VarChar(255)
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+  @@index([userId, createdAt])
+  @@index([entity, entityId])
+}
