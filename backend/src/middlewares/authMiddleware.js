@@ -15,7 +15,14 @@ export async function authenticate(req, res, next) {
 
         const token = authorization.split(" ")[1];
 
+        if (!process.env.JWT_SECRET) {
+            return res.status(401).json({ success: false, message: "AutenticaÃ§Ã£o indisponÃ­vel." });
+        }
+
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (typeof decoded.sub !== "string" || !/^[1-9]\d*$/.test(decoded.sub)) {
+            return res.status(401).json({ success: false, message: "Token invÃ¡lido ou expirado." });
+        }
 
         const user = await prisma.user.findUnique({
             where: {

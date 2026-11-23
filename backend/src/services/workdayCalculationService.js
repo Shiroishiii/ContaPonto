@@ -1,5 +1,6 @@
 
 import prisma from "../config/database.js";
+import { getRecordSequence } from "../utils/workdayRules.js";
 
 const RECORD_SEQUENCE = [
     "ENTRY",
@@ -134,17 +135,17 @@ function getDayRange(dateString, timezone) {
     };
 }
 
-function validateTimeline(records) {
-    if (records.length > RECORD_SEQUENCE.length) {
+function validateTimeline(records, expectedSequence) {
+    if (records.length > expectedSequence.length) {
         throw createError("Quantidade de registros de ponto inválida.");
     }
 
     for (let index = 0; index < records.length; index++) {
         const record = records[index];
 
-        if (record.type !== RECORD_SEQUENCE[index]) {
+        if (record.type !== expectedSequence[index]) {
             throw createError(
-                `Sequência inválida. O registro esperado é ${RECORD_SEQUENCE[index]}.`
+                `Sequência inválida. O registro esperado é ${expectedSequence[index]}.`
             );
         }
 
@@ -318,6 +319,7 @@ export async function calculateEmployeeWorkday(
                     },
                 },
             ],
+            schedule: { companyId },
         },
         include: {
             schedule: {
@@ -336,6 +338,9 @@ export async function calculateEmployeeWorkday(
             (day) => day.weekday === weekday
         ) || null
         : null;
+    const expectedSequence = scheduleDay
+        ? getRecordSequence(scheduleDay)
+        : RECORD_SEQUENCE;
 
     const { start, end } = getDayRange(date, timezone);
 
@@ -353,7 +358,7 @@ export async function calculateEmployeeWorkday(
         },
     });
 
-    const timeline = validateTimeline(records);
+    const timeline = validateTimeline(records, expectedSequence);
 
     const now = new Date();
 
@@ -368,8 +373,7 @@ export async function calculateEmployeeWorkday(
         ? scheduleDay.expectedMinutes
         : null;
 
-    const completed =
-        timeline.length === RECORD_SEQUENCE.length;
+    const completed = Boolean(scheduleDay) && timeline.length === expectedSequence.length;
 
     const variations = calculateVariations(
         workedMinutes,
@@ -389,7 +393,7 @@ export async function calculateEmployeeWorkday(
         timezone
     );
 
-    const nextType = RECORD_SEQUENCE[timeline.length] || null;
+    const nextType = expectedSequence[timeline.length] || null;
 
     let status;
 

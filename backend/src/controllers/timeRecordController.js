@@ -3,10 +3,15 @@ import {
     registerTimeRecord,
     getTodayRecords,
 } from "../services/timeRecordService.js";
+import { z } from "zod";
+
+const recordSchema = z.object({
+    type: z.enum(["ENTRY", "BREAK_START", "BREAK_END", "EXIT"]),
+});
 
 export async function store(req, res, next) {
     try {
-        const { type } = req.body;
+        const { type } = recordSchema.parse(req.body);
 
         const record = await registerTimeRecord(
             req.user.id,
