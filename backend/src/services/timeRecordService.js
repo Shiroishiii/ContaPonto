@@ -1,5 +1,6 @@
 
 import prisma from "../config/database.js";
+import { getRecordSequence } from "../utils/workdayRules.js";
 
 const RECORD_SEQUENCE = [
     "ENTRY",
@@ -7,6 +8,23 @@ const RECORD_SEQUENCE = [
     "BREAK_END",
     "EXIT",
 ];
+
+async function getEmployeeDaySequence(db, employeeId, companyId, now, timezone) {
+    const localDate = getLocalDate(now, timezone);
+    const targetDate = new Date(`${localDate}T12:00:00.000Z`);
+    const assignment = await db.employeeSchedule.findFirst({
+        where: {
+            employeeId,
+            startDate: { lte: targetDate },
+            OR: [{ endDate: null }, { endDate: { gte: targetDate } }],
+            schedule: { companyId },
+        },
+        include: { schedule: { include: { days: true } } },
+        orderBy: { startDate: "desc" },
+    });
+    const weekday = targetDate.getUTCDay();
+    return getRecordSequence(assignment?.schedule.days.find((day) => day.weekday === weekday));
+}
 
 function getLocalDate(date, timezone) {
     const parts = new Intl.DateTimeFormat("en-CA", {
@@ -101,6 +119,7 @@ export async function registerTimeRecord(userId, companyId, type) {
     const now = new Date();
     const timezone = employee.company.timezone || "America/Sao_Paulo";
     const { start, end } = getLocalDayRange(now, timezone);
+    const recordSequence = await getEmployeeDaySequence(prisma, employee.id, companyId, now, timezone);
 
     return prisma.$transaction(async (tx) => {
         const records = await tx.timeRecord.findMany({
@@ -117,13 +136,17 @@ export async function registerTimeRecord(userId, companyId, type) {
             },
         });
 
-        if (records.length >= RECORD_SEQUENCE.length) {
+        if (records.length >= recordSequence.length) {
             throw createError(
                 "Todos os registros de hoje já foram realizados."
             );
         }
 
-        const expectedType = RECORD_SEQUENCE[records.length];
+        const expectedType = recordSequence[records.length];
+
+        if (records.length > 0 && records.at(-1).recordedAt.getTime() >= now.getTime()) {
+            throw createError("O horÃ¡rio do novo registro deve ser posterior ao Ãºltimo registro.", 409);
+        }
 
         if (type !== expectedType) {
             const descriptions = {
@@ -163,7 +186,7 @@ export async function registerTimeRecord(userId, companyId, type) {
         });
 
         return record;
-    });
+    }, { isolationLevel: "Serializable" });
 }
 
 export async function getTodayRecords(userId, companyId, role) {
@@ -230,6 +253,8 @@ export async function getTodayRecords(userId, companyId, role) {
         throw createError("Funcionário ativo não encontrado.", 404);
     }
 
+    const recordSequence = await getEmployeeDaySequence(prisma, employee.id, companyId, now, timezone);
+
     const records = await prisma.timeRecord.findMany({
         where: {
             employeeId: employee.id,
@@ -244,11 +269,11 @@ export async function getTodayRecords(userId, companyId, role) {
         },
     });
 
-    const nextType = RECORD_SEQUENCE[records.length] || null;
+    const nextType = recordSequence[records.length] || null;
 
     return {
         records,
         nextType,
-        completed: records.length === RECORD_SEQUENCE.length,
+        completed: records.length === recordSequence.length,
     };
 }

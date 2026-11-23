@@ -289,7 +289,11 @@ export async function assignSchedule(
         const currentAssignment = await tx.employeeSchedule.findFirst({
             where: {
                 employeeId,
-                endDate: null,
+                OR: [
+                    { endDate: null },
+                    { endDate: { gte: effectiveDate } },
+                    { startDate: { gte: effectiveDate } },
+                ],
             },
             orderBy: {
                 startDate: "desc",
