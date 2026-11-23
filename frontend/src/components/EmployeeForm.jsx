@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
-import { JO } from '../data/mock'
+import { JO, depOf } from '../data/mock'
 import { okm, onlyDigits, validCPF } from '../utils'
 import { Field, Icon } from './ui'
 
@@ -26,7 +26,7 @@ export default function EmployeeForm({ employee }) {
       setEmployees((l) => l.map((o) => (o.id === employee.id ? { ...o, ...f } : o)))
       log(user.name, 'Atualizou dados de funcionário', `${f.n} · ${f.c}`, 'edit', 'Funcionários')
     } else {
-      setEmployees((l) => [{ ...f, id: Date.now(), d: new Date().toLocaleDateString('pt-BR') }, ...l])
+      setEmployees((l) => [{ ...f, id: Date.now(), d: new Date().toLocaleDateString('pt-BR'), mat: 'CP-' + String(employees.length + 1).padStart(5, '0'), dep: depOf(f.c) }, ...l])
       setRecords((l) => [{ n: f.n, d: '2025-06-18', en: '—', iv: '—', rt: '—', sa: '—', t: '—', df: '—', s: 'Incompleto' }, ...l])
       log(user.name, 'Cadastrou um novo funcionário', `${f.n} · ${f.c}`, 'users', 'Funcionários')
     }

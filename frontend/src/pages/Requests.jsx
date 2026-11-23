@@ -5,7 +5,7 @@ import { Avatar, Badge, Icon, PageHeader } from '../components/ui'
 const TABS = [['pend', 'Pendentes', 'Pendente'], ['apr', 'Aprovadas', 'Aprovada'], ['rej', 'Rejeitadas', 'Rejeitada']]
 
 export default function Requests() {
-  const { requests, setRequests, log, toast, user } = useApp()
+  const { adminRequests: requests, setRequests, log, toast, user } = useApp()
   const [tab, setTab] = useState('pend')
   const [sel, setSel] = useState(0)
   const [obs, setObs] = useState('')

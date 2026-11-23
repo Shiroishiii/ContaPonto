@@ -4,8 +4,8 @@ import { useApp } from '../context/AppContext'
 
 export const Icon = ({ n }) => <svg viewBox="0 0 24 24"><path d={I[n]} /></svg>
 
-const BC = { Ativo: 'g', Regular: 'g', 'No horário': 'g', Aprovada: 'g', Trabalhando: 'g', Atrasado: 'a', Atraso: 'a', Pendente: 'a', Inativo: 'n', 'Em andamento': 'n', Extra: 'n', Incompleto: 'r', Rejeitada: 'r', '8 min. atraso': 'a' }
-export const Badge = ({ t }) => <span className={'bg ' + (BC[t] || 'n')}>{t}</span>
+const BC = { Ativo: 'g', Regular: 'g', 'No horário': 'g', Aprovada: 'g', Trabalhando: 'g', Atrasado: 'a', Atraso: 'a', Pendente: 'a', Inativo: 'n', 'Em andamento': 'n', Extra: 'n', Incompleto: 'r', Rejeitada: 'r', '8 min. atraso': 'a', 'Em intervalo': 'a', 'Jornada em andamento': 'g', 'Em jornada': 'g', 'Jornada não iniciada': 'n', 'Não iniciada': 'n', 'Jornada finalizada': 'g', Finalizada: 'g', 'Funcionário ativo': 'g', 'Funcionária ativa': 'g' }
+export const Badge = ({ t, tone }) => <span className={'bg ' + (tone || BC[t] || 'n')}>{t}</span>
 
 export const Avatar = ({ name, solid, size }) => (
   <span className={'av' + (solid ? '' : ' d')} style={size ? { width: size, height: size, fontSize: size / 3 } : undefined}>{ini(name)}</span>

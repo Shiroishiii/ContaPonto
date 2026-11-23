@@ -16,3 +16,10 @@ export function validCPF(c) {
 }
 export const fmtCPF = (c = '') => c.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4')
 export const fmtTel = (t = '') => (t.length === 11 ? t.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3') : t.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3'))
+export const MON3 = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+const MONF = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+export const fmtShort = (iso) => { const [y, m, d] = iso.split('-'); return `${d} ${MON3[+m - 1]} ${y}` }
+export const longDay = (s) => { const [d, m] = s.split(' '); return `${+d} de ${MONF[MON3.indexOf(m)] || m}` }
+export const maskCPF = (c = '') => (c ? `•••.${c.slice(3, 6)}.•••-${c.slice(9)}` : '—')
+export const sgn = (m) => (m < 0 ? '-' : '+') + hm(m)
+export const fem = (n = '') => /a$/i.test(n.split(' ')[0])

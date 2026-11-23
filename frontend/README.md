@@ -19,3 +19,9 @@ Login de demonstração: qualquer e-mail válido + senha com 6+ caracteres (aba 
 - `src/index.css` — tokens de tema (dark/light) e estilos dos componentes
 
 A área do Funcionário será adicionada na próxima etapa.
+
+## Área do Funcionário
+- Rotas: `/funcionario`, `/funcionario/registrar-ponto`, `/funcionario/historico`, `/funcionario/correcoes`, `/funcionario/perfil`
+- Login: aba **Funcionário** com o e-mail cadastrado pelo administrador (demo: `marina.costa@novaobra.com.br`, qualquer senha de 6+ caracteres). Funcionário não cria conta.
+- Correções criadas pelo funcionário aparecem em **Solicitações** do administrador, e a decisão volta para o funcionário.
+- Registros feitos em **Registrar ponto** atualizam **Registros de ponto** e **Atividades** do administrador.
