@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { Icon, PageHeader, Toggle, UserAvatar } from '../components/ui'
+import { usePhotoPicker } from '../components/photo'
 
 const SECTIONS = [['c1', 'Dados da empresa', 'brief'], ['c2', 'Aparência', 'sun'], ['c3', 'Preferências', 'gear'], ['c4', 'Minha conta', 'user']]
 const PREFS = [['Notificar solicitações de correção', 'Receba um aviso sempre que houver uma nova solicitação.'], ['Alertar registros em atraso', 'Alerte após 15 minutos do horário previsto.'], ['Enviar resumo semanal por e-mail', 'Resumo enviado toda segunda-feira às 08:00.']]
@@ -23,25 +24,8 @@ function PasswordModal() {
 }
 
 export default function Settings() {
-  const { theme, setTheme, user, setUser, toast, openModal, photo, setPhoto } = useApp()
-  const fileRef = useRef(null)
-  const onPhoto = (e) => {
-    const file = e.target.files[0]
-    e.target.value = ''
-    if (!file) return
-    if (!file.type.startsWith('image/')) return toast('Escolha um arquivo de imagem.')
-    if (file.size > 5 * 1024 * 1024) return toast('A imagem deve ter até 5 MB.')
-    const url = URL.createObjectURL(file)
-    const img = new Image()
-    img.onload = () => {
-      const s = 256, c = document.createElement('canvas'), m = Math.min(img.width, img.height)
-      c.width = c.height = s
-      c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, s, s)
-      setPhoto(c.toDataURL('image/jpeg', 0.85)); URL.revokeObjectURL(url); toast('Foto de perfil atualizada')
-    }
-    img.onerror = () => toast('Não foi possível ler a imagem.')
-    img.src = url
-  }
+  const { theme, setTheme, user, setUser, toast, openModal } = useApp()
+  const { photo, ref: fileRef, onChange: onPhoto, remove } = usePhotoPicker()
   const [prefs, setPrefs] = useState([true, true, false])
   const go = (id) => document.getElementById(id).scrollIntoView({ behavior: 'smooth' })
 
@@ -82,7 +66,7 @@ export default function Settings() {
               <div style={{ flex: 1 }}><b>Foto de perfil</b><div className="sm">Sem foto, aparece a inicial do seu primeiro nome.</div></div>
               <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPhoto} />
               <button className="bt o" onClick={() => fileRef.current.click()}>{photo ? 'Trocar foto' : 'Adicionar foto'}</button>
-              {photo && <button className="bt o" onClick={() => { setPhoto(null); toast('Foto removida') }}>Remover</button>}
+              {photo && <button className="bt o" onClick={remove}>Remover</button>}
             </div>
             <div className="fg" style={{ margin: '16px 0' }}>
               <div><label className="lb">Nome</label><input className="fi" value={user.name} onChange={(e) => setUser({ ...user, name: e.target.value })} /></div>

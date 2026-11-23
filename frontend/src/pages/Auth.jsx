@@ -26,24 +26,32 @@ function Input({ label, type = 'text', value, onChange, placeholder }) {
 
 export default function Auth({ mode }) {
   const nav = useNavigate()
-  const { setUser, toast } = useApp()
+  const { setUser, toast, employees } = useApp()
   const [tab, setTab] = useState('admin')
   const [f, setF] = useState({ em: 'camila@novaobra.com.br', pw: 'demo12345', pw2: '', nm: '', emp: '' })
   const [err, setErr] = useState('')
   const set = (k) => (v) => setF({ ...f, [k]: v })
+
+  const switchTab = (t) => { setTab(t); setErr(''); setF({ ...f, em: t === 'func' ? 'marina.costa@novaobra.com.br' : 'camila@novaobra.com.br' }) }
 
   const submit = () => {
     const bad = (t) => setErr(t)
     if (mode === 'login') {
       if (!okm(f.em)) return bad('Informe um e-mail corporativo válido.')
       if (f.pw.length < 6) return bad('A senha deve ter ao menos 6 caracteres.')
-      if (tab === 'func') return bad('A área do funcionário será liberada na próxima etapa. Use a aba Administrador.')
-      setUser({ name: 'Camila Mendes', email: f.em }); toast('Bem-vinda, Camila'); nav('/admin')
+      const emp = employees.find((x) => x.e.toLowerCase() === f.em.toLowerCase())
+      if (tab === 'func') {
+        if (!emp) return bad('E-mail não cadastrado. Solicite seu acesso ao administrador.')
+        if (emp.s === 'Inativo') return bad('Acesso desativado. Fale com o administrador.')
+        setUser({ role: 'func', empId: emp.id, name: emp.n, email: emp.e }); toast('Bem-vindo(a), ' + emp.n.split(' ')[0]); return nav('/funcionario')
+      }
+      if (emp) return bad('Este e-mail pertence a um funcionário. Use a aba Funcionário.')
+      setUser({ role: 'admin', name: 'Camila Mendes', email: f.em }); toast('Bem-vinda, Camila'); nav('/admin')
     } else if (mode === 'cad') {
       if (!okm(f.em)) return bad('Informe um e-mail corporativo válido.')
       if (!f.nm || !f.emp) return bad('Preencha nome completo e empresa.')
       if (f.pw.length < 6) return bad('A senha deve ter ao menos 6 caracteres.')
-      setUser({ name: f.nm, email: f.em }); toast('Conta criada com sucesso'); nav('/admin')
+      setUser({ role: 'admin', name: f.nm, email: f.em }); toast('Conta criada com sucesso'); nav('/admin')
     } else if (mode === 'rec') {
       if (!okm(f.em)) return bad('Informe um e-mail válido.')
       toast('Link de redefinição enviado'); nav('/redefinir-senha')
@@ -74,8 +82,8 @@ export default function Auth({ mode }) {
           <p className="sm" style={{ marginBottom: 22 }}>{TXT[mode][1]}</p>
           {mode === 'login' && (
             <div className="tab">
-              <button type="button" className={tab === 'admin' ? 'on' : ''} onClick={() => setTab('admin')}>Administrador</button>
-              <button type="button" className={tab === 'func' ? 'on' : ''} onClick={() => setTab('func')}>Funcionário</button>
+              <button type="button" className={tab === 'admin' ? 'on' : ''} onClick={() => switchTab('admin')}>Administrador</button>
+              <button type="button" className={tab === 'func' ? 'on' : ''} onClick={() => switchTab('func')}>Funcionário</button>
             </div>
           )}
           {mode !== 'red' && <Input label="E-mail corporativo" type="email" value={f.em} onChange={set('em')} />}
@@ -90,6 +98,7 @@ export default function Auth({ mode }) {
             </div>
           )}
           <button className="bt" type="submit" style={{ marginTop: mode === 'login' ? 0 : 14 }}><Icon n={btn[0]} /> {btn[1]}</button>
+          {mode === 'login' && tab === 'func' && <p className="sm" style={{ marginTop: 8 }}>Use o e-mail cadastrado pelo administrador. Demonstração: marina.costa@novaobra.com.br com qualquer senha de 6+ caracteres.</p>}
           {mode === 'login' && tab === 'func' && <p style={{ textAlign: 'center', marginTop: 22, fontSize: 11, color: '#858B91' }}>O acesso do funcionário é criado pelo administrador da empresa.</p>}
           {mode === 'login' && tab === 'admin' && <p style={{ textAlign: 'center', marginTop: 22, fontSize: 11, color: '#858B91' }}>Ainda não possui acesso? <button type="button" style={{ textDecoration: 'underline', color: '#111315' }} onClick={() => nav('/cadastro')}>Criar conta</button></p>}
           {mode !== 'login' && mode !== 'red' && <p style={{ textAlign: 'center', marginTop: 18 }}><button type="button" style={{ textDecoration: 'underline', fontSize: 11 }} onClick={() => nav('/login')}>Voltar para o acesso</button></p>}

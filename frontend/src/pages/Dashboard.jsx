@@ -11,7 +11,7 @@ const RECENT = [['Marina Costa', 'Entrada', '08:32', '8 min. atraso'], ['Rafael 
 const SITUACAO = [['Trabalhando', 84, 'g'], ['Em intervalo', 18, 'a'], ['Ainda não iniciou', 11, 'r'], ['Jornada concluída', 15, 'n']]
 
 export default function Dashboard() {
-  const { requests, openModal } = useApp()
+  const { adminRequests: requests, openModal } = useApp()
   const nav = useNavigate()
   const [per, setPer] = useState(0)
   const [, factor, total] = PERIODS[per]
