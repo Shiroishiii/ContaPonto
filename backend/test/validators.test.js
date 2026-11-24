@@ -4,6 +4,7 @@ import { registerSchema, loginSchema } from "../src/validators/authValidator.js"
 import { createEmployeeSchema, employeeStatusSchema, updateEmployeeSchema } from "../src/validators/employeeValidator.js";
 import { createScheduleSchema, assignScheduleSchema } from "../src/validators/scheduleValidator.js";
 import { getRecordSequence } from "../src/utils/workdayRules.js";
+import { createCorrectionSchema, reviewCorrectionSchema } from "../src/validators/correctionValidator.js";
 
 test("auth normalizes email and formatted CNPJ", () => {
     const result = registerSchema.parse({
@@ -40,4 +41,14 @@ test("schedule without a break requires only entry and exit", () => {
     assert.deepEqual(getRecordSequence({ breakStartTime: null, breakEndTime: null }), ["ENTRY", "EXIT"]);
     assert.deepEqual(getRecordSequence({ breakStartTime: "12:00", breakEndTime: "13:00" }), ["ENTRY", "BREAK_START", "BREAK_END", "EXIT"]);
     assert.deepEqual(getRecordSequence(null), ["ENTRY", "BREAK_START", "BREAK_END", "EXIT"]);
+});
+
+test("correction requests require fields for their operation and decisions", () => {
+    const iso = "2026-11-23T08:15:00-03:00";
+    assert.equal(createCorrectionSchema.safeParse({ action: "ADD_RECORD", requestedType: "ENTRY", requestedAt: iso, reason: "Esqueci de registrar a entrada." }).success, true);
+    assert.equal(createCorrectionSchema.safeParse({ action: "ADD_RECORD", reason: "Esqueci de registrar a entrada." }).success, false);
+    assert.equal(createCorrectionSchema.safeParse({ action: "ADJUST_TIME", recordId: 2, requestedAt: iso, reason: "O horário original estava incorreto." }).success, true);
+    assert.equal(createCorrectionSchema.safeParse({ action: "REMOVE_RECORD", recordId: 2, reason: "Este registro foi lançado em duplicidade." }).success, true);
+    assert.equal(reviewCorrectionSchema.safeParse({ decision: "APPROVED", reviewerNote: "Conferido." }).success, true);
+    assert.equal(reviewCorrectionSchema.safeParse({ decision: "PENDING" }).success, false);
 });

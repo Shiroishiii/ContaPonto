@@ -73,6 +73,11 @@ export async function listSchedules(companyId) {
                     assignments: true,
                 },
             },
+            assignments: {
+                where: { endDate: null },
+                include: { employee: { select: { id: true, fullName: true } } },
+                orderBy: { startDate: "desc" },
+            },
         },
     });
 }

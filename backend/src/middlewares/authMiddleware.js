@@ -35,6 +35,8 @@ export async function authenticate(req, res, next) {
                 email: true,
                 role: true,
                 isActive: true,
+                company: { select: { id: true, name: true, cnpj: true, timezone: true } },
+                employee: { select: { id: true, companyId: true, userId: true, fullName: true, employeeCode: true, position: true, status: true, cpf: true, phone: true, admissionDate: true, scheduleAssignments: { where: { endDate: null }, include: { schedule: { include: { days: true } } }, orderBy: { startDate: 'desc' } } } },
             },
         });
 
@@ -45,7 +47,7 @@ export async function authenticate(req, res, next) {
             });
         }
 
-        req.user = user;
+        req.user = { ...user, employeeId: user.employee?.id ?? null };
 
         next();
     } catch (error) {

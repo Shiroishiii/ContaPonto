@@ -1,67 +1,39 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
-import { useNow, stepIndex, workedMin, BADGE } from '../../data/punch'
-import { journeyOf, monthDays } from '../../data/schedule'
+import { getWorkday } from '../../services/reportService'
+import { useNow, LABELS, BADGE } from '../../data/punch'
 import { Badge, Icon } from '../../components/ui'
 import Track from '../../components/Track'
-import { hm, longDay, pad, sgn } from '../../utils'
-
-const NEXT = ['Registrar entrada', 'Iniciar intervalo', 'Retornar do intervalo', 'Registrar saída', 'Jornada finalizada']
-
+import { hm, pad, sgn } from '../../utils'
+const localToday = (timezone) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date())
+const offsetDate = (date, days) => new Date(Date.parse(`${date}T12:00:00Z`) + days * 86400000).toISOString().slice(0, 10)
+const time = (date, timezone) => date ? new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(date)) : '—'
+const TYPES = ['ENTRY', 'BREAK_START', 'BREAK_END', 'EXIT']
 export default function EmpDashboard() {
-  const { me, punch, journeys, requests } = useApp()
-  const nav = useNavigate()
-  const now = useNow()
-  const sched = journeyOf(me, journeys)
-  const idx = stepIndex(punch)
-  const worked = workedMin(punch, now.h * 60 + now.m)
-  const first = me.n.split(' ')[0]
-  const pend = requests.filter((r) => r.n === me.n && r.st === 'Pendente')
-
-  const days = monthDays(me, 2025, 5, sched)
-  const past = [16, 17].map((d) => days.find((x) => x.d === d))
-  const bars = [past[0]?.tot ?? 0, past[1]?.tot ?? 0, worked, 0, 0]
-  const saldo = past.reduce((a, x) => a + (x && x.tot != null ? x.tot - sched.min : 0), 0)
-  const items = ['Entrada', 'Início do intervalo', 'Retorno', 'Saída prevista'].map((label, i) => ({
-    label: i === 3 && punch[3] ? 'Saída' : label, time: punch[i] || (i === 3 ? sched.s : '—'), state: punch[i] ? 'done' : i === idx ? 'cur' : 'pend',
-  }))
-
-  return (
-    <>
-      <div className="ph">
-        <div><h1 style={{ fontSize: 26 }}>Olá, {first}.</h1><div className="sm" style={{ fontSize: 12 }}>Quarta-feira, 18 de junho de 2025.</div></div>
-        <Badge t={BADGE[idx]} />
-      </div>
-      <div className="g2">
-        <div className="pn pd" style={{ display: 'flex', flexDirection: 'column', gap: 18, minHeight: 270 }}>
-          <div className="lb" style={{ fontSize: 9 }}>Sua jornada hoje</div>
-          <div className="sp na" style={{ flex: 1, alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <div><div className="sm">Próxima ação</div><div style={{ fontSize: 28, margin: '10px 0' }}>{NEXT[idx]}</div><div className="sm" style={{ fontSize: 10 }}>Horário previsto: {sched.s}</div></div>
-            <div style={{ textAlign: 'right' }}><div className="num" style={{ fontSize: 34 }}>{pad((worked / 60) | 0)}<small style={{ fontSize: 13 }}>h</small> {pad(worked % 60)}<small style={{ fontSize: 13 }}>min</small></div><div className="lb" style={{ fontSize: 8 }}>trabalhados</div></div>
-          </div>
-          <div><button className="bt" onClick={() => nav('/funcionario/registrar-ponto')}><Icon n="clock" /> Ir para registro de ponto</button></div>
-        </div>
-        <div className="pn pd">
-          <div className="sp"><span className="lb" style={{ fontSize: 9 }}>Semana atual</span><b style={{ fontSize: 17 }}>{(bars.reduce((a, b) => a + b, 0) / 60) | 0}h {pad(bars.reduce((a, b) => a + b, 0) % 60)}min</b></div>
-          <h2 style={{ margin: '8px 0 18px' }}>Resumo semanal</h2>
-          <div className="wk">{bars.map((v, i) => <div key={i}><i style={{ height: Math.min(100, (v / sched.min) * 100) + '%' }} /></div>)}</div>
-          <div className="wk" style={{ height: 'auto', margin: '8px 0 14px' }}>{['S', 'T', 'Q', 'Q', 'S'].map((d, i) => <span key={i} className="sm" style={{ textAlign: 'center', background: 'none' }}>{d}</span>)}</div>
-          <div className="sp sm" style={{ borderTop: '1px solid var(--b)', paddingTop: 12 }}><span>Previstas <b style={{ color: 'var(--t)' }}>{hm(sched.min * 5)}</b></span><span>Saldo <b style={{ color: `var(--${saldo < 0 ? 'a' : 'g'})` }}>{sgn(saldo)}</b></span></div>
-        </div>
-      </div>
-      <div className="g2">
-        <div className="pn pd">
-          <div className="sp"><span className="lb" style={{ fontSize: 9 }}>Hoje</span><button className="sm" onClick={() => nav('/funcionario/historico')}>Ver histórico</button></div>
-          <h2 style={{ margin: '8px 0 24px' }}>Registros da jornada</h2>
-          <Track items={items} />
-        </div>
-        <div className="pn pd">
-          <div className="lb" style={{ fontSize: 9 }}>Solicitações</div>
-          <h2 style={{ fontSize: 17, fontWeight: 500, margin: '14px 0 10px' }}>{pend.length ? `${pend.length} ${pend.length > 1 ? 'correções' : 'correção'} em análise` : 'Nenhuma correção pendente'}</h2>
-          <div className="sm" style={{ marginBottom: 22 }}>{pend.length ? `Sua solicitação de ${longDay(pend[pend.length - 1].dr)} está aguardando avaliação.` : 'Você não tem solicitações aguardando avaliação.'}</div>
-          <button className="row" style={{ fontWeight: 600, fontSize: 12 }} onClick={() => nav('/funcionario/correcoes')}>{pend.length ? 'Acompanhar solicitação' : 'Ver solicitações'} <Icon n="arr" /></button>
-        </div>
-      </div>
-    </>
-  )
+  const { me, user, token, requests, today } = useApp()
+  const timezone = user?.company?.timezone || 'America/Sao_Paulo'
+  const nav = useNavigate(); const now = useNow()
+  const [workday, setWorkday] = useState(null); const [week, setWeek] = useState([]); const [error, setError] = useState('')
+  useEffect(() => {
+    if (!me?.id || !token) return
+    let active = true
+    Promise.all(Array.from({ length: 7 }, (_, i) => getWorkday(me.id, offsetDate(localToday(timezone), i - 6), token))).then((days) => { if (active) { setWeek(days); setWorkday(days.at(-1)) } }).catch((e) => { if (active) setError(e.message) })
+    return () => { active = false }
+  }, [me?.id, token, today, timezone])
+  const pending = requests.filter((r) => r.status === 'PENDING').length
+  const worked = week.reduce((sum, x) => sum + (x.summary?.workedMinutes || 0), 0)
+  const expected = week.reduce((sum, x) => sum + (x.summary?.expectedMinutes || 0), 0)
+  const saldo = week.reduce((sum, x) => sum + (x.summary?.balanceMinutes || 0), 0)
+  const next = today?.nextType
+  const idx = next ? TYPES.indexOf(next) : 4
+  const items = LABELS.map((label, i) => ({ label, time: time(workday?.records?.find((r) => r.type === TYPES[i])?.recordedAt, timezone), state: workday?.records?.some((r) => r.type === TYPES[i]) ? 'done' : i === idx ? 'cur' : 'pend' }))
+  const recentRequest = requests[0]
+  return <>
+    <div className="ph"><div><h1 style={{ fontSize: 26 }}>Olá, {me?.n?.split(' ')[0] || 'Funcionário'}.</h1><div className="sm" style={{ fontSize: 12 }}>{new Date().toLocaleDateString('pt-BR', { timeZone: timezone, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div></div><Badge t={BADGE[Math.min(idx, 4)]} /></div>
+    {error && <div className="er">{error}</div>}
+    <div className="g2"><div className="pn pd" style={{ display: 'flex', flexDirection: 'column', gap: 18, minHeight: 270 }}><div className="lb" style={{ fontSize: 9 }}>Sua jornada hoje</div><div className="sp na" style={{ flex: 1, alignItems: 'center', gap: 16, flexWrap: 'wrap' }}><div><div className="sm">Próxima ação</div><div style={{ fontSize: 28, margin: '10px 0' }}>{next ? LABELS[idx] : 'Jornada concluída'}</div><div className="sm" style={{ fontSize: 10 }}>Horário previsto: {workday?.schedule?.endTime || '—'}</div></div><div style={{ textAlign: 'right' }}><div className="num" style={{ fontSize: 34 }}>{workday?.summary?.workedHours || '—'}</div><div className="lb" style={{ fontSize: 8 }}>trabalhados</div></div></div><button className="bt" onClick={() => nav('/funcionario/registrar-ponto')}><Icon n="clock" /> Ir para registro de ponto</button></div>
+      <div className="pn pd"><div className="sp"><span className="lb" style={{ fontSize: 9 }}>Últimos 7 dias</span><b style={{ fontSize: 17 }}>{hm(worked)}</b></div><h2 style={{ margin: '8px 0 18px' }}>Resumo semanal</h2><div className="wk">{week.map((d) => <div key={d.date} title={`${d.date}: ${d.summary.workedHours || '0h00'}`}><i style={{ height: `${Math.min(100, d.summary.workedMinutes / Math.max(d.summary.expectedMinutes || 480, 1) * 100)}%` }} /></div>)}</div><div className="wk" style={{ height: 'auto', margin: '8px 0 14px' }}>{week.map((d) => <span key={d.date} className="sm" style={{ textAlign: 'center', background: 'none' }}>{new Date(`${d.date}T12:00:00Z`).toLocaleDateString('pt-BR', { weekday: 'narrow', timeZone: 'UTC' })}</span>)}</div><div className="sp sm" style={{ borderTop: '1px solid var(--b)', paddingTop: 12 }}><span>Previstas <b style={{ color: 'var(--t)' }}>{hm(expected)}</b></span><span>Saldo <b style={{ color: `var(--${saldo < 0 ? 'a' : 'g'})` }}>{sgn(saldo)}</b></span></div></div></div>
+    <div className="g2"><div className="pn pd"><div className="sp"><span className="lb" style={{ fontSize: 9 }}>Hoje</span><button className="sm" onClick={() => nav('/funcionario/historico')}>Ver histórico</button></div><h2 style={{ margin: '8px 0 24px' }}>Registros da jornada</h2><Track items={items} /></div><div className="pn pd"><div className="lb" style={{ fontSize: 9 }}>Solicitações</div><h2 style={{ fontSize: 17, fontWeight: 500, margin: '14px 0 10px' }}>{pending ? `${pending} correção(ões) em análise` : 'Nenhuma correção pendente'}</h2><div className="sm" style={{ marginBottom: 22 }}>{recentRequest ? `Última solicitação: ${recentRequest.dr}.` : 'Você não tem solicitações aguardando avaliação.'}</div><button className="row" style={{ fontWeight: 600, fontSize: 12 }} onClick={() => nav('/funcionario/correcoes')}>Ver solicitações <Icon n="arr" /></button></div></div>
+  </>
 }

@@ -27,7 +27,6 @@ export default function MyRequests() {
   useEffect(() => { const c = () => setMenu(null); document.addEventListener('click', c); return () => document.removeEventListener('click', c) }, [])
   const list = requests.filter((r) => r.n === me.n)
 
-  const cancel = (r) => { setRequests((l) => l.filter((x) => x.id !== r.id)); log(me.n, 'Cancelou uma solicitação de correção', `${r.tp} em ${r.dr.slice(0, 6)}`, 'msg', 'Solicitações'); toast('Solicitação cancelada') }
 
   return (
     <>
@@ -41,7 +40,7 @@ export default function MyRequests() {
                 <td className="sm">{r.dr}</td><td className="sm">{r.tp}</td><td className="sm">{r.s}</td><td className="sm">{r.env}</td><td><Badge t={r.st} /></td>
                 <td style={{ position: 'relative' }} onClick={(e) => { e.stopPropagation(); setMenu(menu === r.id ? null : r.id) }}>
                   <button className="sm">•••</button>
-                  {menu === r.id && <div className="dd"><button onClick={() => openModal(<Details r={r} />)}>Ver detalhes</button>{r.st === 'Pendente' && <button style={{ color: 'var(--r)' }} onClick={() => cancel(r)}>Cancelar solicitação</button>}</div>}
+                  {menu === r.id && <div className="dd"><button onClick={() => openModal(<Details r={r} />)}>Ver detalhes</button></div>}
                 </td>
               </tr>
             ))}

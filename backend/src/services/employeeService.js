@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import prisma from "../config/database.js";
 
-export async function createEmployee(data, companyId) {
+export async function createEmployee(data, companyId, adminId) {
     const passwordHash = await bcrypt.hash(data.password, 12);
 
     try {
@@ -48,6 +48,17 @@ export async function createEmployee(data, companyId) {
                     admissionDate: data.admissionDate
                         ? new Date(`${data.admissionDate}T00:00:00.000Z`)
                         : null,
+                },
+            });
+
+            await tx.auditLog.create({
+                data: {
+                    companyId,
+                    userId: adminId,
+                    action: "EMPLOYEE_CREATED",
+                    entity: "Employee",
+                    entityId: String(employee.id),
+                    details: { employeeCode: employee.employeeCode },
                 },
             });
 

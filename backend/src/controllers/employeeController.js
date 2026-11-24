@@ -19,7 +19,8 @@ export async function store(req, res, next) {
 
         const employee = await createEmployee(
             data,
-            req.user.companyId
+            req.user.companyId,
+            req.user.id
         );
 
         return res.status(201).json({
