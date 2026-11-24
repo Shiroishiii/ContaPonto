@@ -177,7 +177,7 @@ export async function registerTimeRecord(userId, companyId, type) {
                 userId,
                 action: "TIME_RECORD_CREATED",
                 entity: "TimeRecord",
-                entityId: record.id,
+                entityId: String(record.id),
                 details: {
                     type,
                     recordedAt: now.toISOString(),

@@ -1,0 +1,5 @@
+import { createCorrection, listCorrections, reviewCorrection } from '../services/correctionService.js';
+import { createCorrectionSchema, reviewCorrectionSchema } from '../validators/correctionValidator.js';
+export async function store(req, res, next) { try { const data = createCorrectionSchema.parse(req.body); const result = await createCorrection(req.user.id, req.user.companyId, data); res.status(201).json({ success: true, data: result }); } catch (e) { next(e); } }
+export async function index(req, res, next) { try { const data = await listCorrections(req.user, req.query); res.json({ success: true, data }); } catch (e) { next(e); } }
+export async function decide(req, res, next) { try { const id = Number(req.params.id); if (!Number.isInteger(id) || id < 1) return res.status(400).json({ success: false, message: 'ID inválido.' }); const body = reviewCorrectionSchema.parse(req.body); const data = await reviewCorrection(id, req.user.companyId, req.user.id, body.decision, body.reviewerNote); res.json({ success: true, data }); } catch (e) { next(e); } }

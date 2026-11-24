@@ -14,8 +14,11 @@ import ClockIn from './pages/employee/ClockIn'
 import History from './pages/employee/History'
 import MyRequests from './pages/employee/MyRequests'
 import MyProfile from './pages/employee/MyProfile'
+import { useApp } from './context/AppContext'
 
 export default function App() {
+  const { loading } = useApp()
+  if (loading) return <div className="sm" style={{ padding: 40, textAlign: 'center' }}>Restaurando sessão…</div>
   return (
     <Routes>
       <Route path="/login" element={<Auth mode="login" />} />

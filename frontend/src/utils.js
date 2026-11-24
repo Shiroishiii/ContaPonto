@@ -4,7 +4,7 @@ export const hm = (m) => pad((Math.abs(m) / 60) | 0) + 'h' + pad(Math.abs(m) % 6
 export const ini = (n) => n.split(' ').map((x) => x[0]).slice(0, 2).join('')
 export const slug = (n) => n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/ /g, '.')
 export const tm = (s) => { const [a, b] = s.split(':'); return a * 60 + +b }
-export const carga = (j) => hm(tm(j.s) - tm(j.e) - (tm(j.r) - tm(j.i)))
+export const carga = (j) => hm(tm(j.s) - tm(j.e) - (j.i && j.r ? tm(j.r) - tm(j.i) : 0))
 export const okm = (e) => /^\S+@\S+\.\S+$/.test(e)
 export const nowLabel = () => 'Hoje, ' + new Date().toTimeString().slice(0, 5)
 export const brDate = (d) => d.split('-').reverse().join('/')

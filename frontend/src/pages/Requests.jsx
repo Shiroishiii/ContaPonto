@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { Avatar, Badge, Icon, PageHeader } from '../components/ui'
+import { reviewCorrection } from '../services/correctionService'
 
 const TABS = [['pend', 'Pendentes', 'Pendente'], ['apr', 'Aprovadas', 'Aprovada'], ['rej', 'Rejeitadas', 'Rejeitada']]
 
 export default function Requests() {
-  const { adminRequests: requests, setRequests, log, toast, user } = useApp()
+  const { adminRequests: requests, token, refreshData, toast } = useApp()
   const [tab, setTab] = useState('pend')
   const [sel, setSel] = useState(0)
   const [obs, setObs] = useState('')
@@ -14,10 +15,9 @@ export default function Requests() {
   const r = list.find((x) => x.id === sel) || list[0]
   const pend = requests.filter((x) => x.st === 'Pendente').length
 
-  const decide = (st) => {
-    setRequests((l) => l.map((x) => (x.id === r.id ? { ...x, st, ob: obs } : x)))
-    log(user.name, `${st === 'Aprovada' ? 'Aprovou' : 'Rejeitou'} uma solicitação de correção`, `${r.n} · Registro de ${r.tp.toLowerCase()} em ${r.dr.slice(0, 6)}`, 'msg', 'Solicitações')
-    setObs(''); setSel(0); toast('Solicitação ' + st.toLowerCase())
+  const decide = async (st) => {
+    try { await reviewCorrection(r.id, { decision: st === 'Aprovada' ? 'APPROVED' : 'REJECTED', reviewerNote: obs || null }, token); await refreshData(); setObs(''); setSel(0); toast('Solicitação ' + st.toLowerCase()) }
+    catch (error) { toast(error.message) }
   }
 
   return (

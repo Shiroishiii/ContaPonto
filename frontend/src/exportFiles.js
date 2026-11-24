@@ -6,7 +6,7 @@ export function exportPDF(title, head, body, filename) {
   d.setFontSize(14)
   d.text('Conta Ponto - ' + title, 14, 16)
   d.setFontSize(8)
-  d.text('Dados de demonstração · gerado em ' + new Date().toLocaleString('pt-BR'), 14, 22)
+  d.text('Gerado em ' + new Date().toLocaleString('pt-BR'), 14, 22)
   autoTable(d, { startY: 27, head: [head], body, styles: { fontSize: 8 }, headStyles: { fillColor: [17, 19, 21] } })
   d.save(filename)
 }
